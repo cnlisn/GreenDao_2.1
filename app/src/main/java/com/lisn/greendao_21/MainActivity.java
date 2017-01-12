@@ -11,6 +11,8 @@ import android.widget.TextView;
 import java.util.List;
 
 import de.greenrobot.dao.async.AsyncSession;
+import de.greenrobot.dao.query.LazyList;
+import de.greenrobot.dao.query.Query;
 import de.greenrobot.dao.query.QueryBuilder;
 import user.db.DaoMaster;
 import user.db.DaoSession;
@@ -120,6 +122,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //2.查询指定条件
         QueryBuilder<User> userQueryBuilder = queryBuilder.where(UserDao.Properties.Name.eq("zhangsan"));
+        //下边这个是查询唯一的
+        // User userQueryBuilder = queryBuilder.where(UserDao.Properties.Name.eq("zhangsan")).unique();
 
         List<User> list = userQueryBuilder.list();
         for (User user : list) {
@@ -150,7 +154,54 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         for (User user : user6) {
             System.out.println("6--user : "+user.getName() +"::"+user.getAge() +"::"+user.getTel());
         }
+
+        //7.懒加载查询所有 注意：closeLazyList集合
+        LazyList<User> users7 = userDao.queryBuilder().listLazy();
+        for (User user : users7) {
+            System.out.println("7--user : "+user.getName() +"::"+user.getAge() +"::"+user.getTel());
+        }
+        users7.close();
+
+        //8.通配符模糊查询 通过通配符%，查询所有name以zhangsan开头的对象
+        List<User> users8 = userDao.queryBuilder().where(UserDao.Properties.Name.like("zhangsan%")).list();
+        for (User user : users8) {
+            System.out.println("8--user : "+user.getName() +"::"+user.getAge() +"::"+user.getTel());
+        }
+
+        //9.通过between 查询年龄在18到30之间的对象
+        List<User> users9 = userDao.queryBuilder().where(UserDao.Properties.Age.between(18, 30)).list();
+        for (User user : users9) {
+            System.out.println("9--user : "+user.getName() +"::"+user.getAge() +"::"+user.getTel());
+        }
+
+        //10.通过gt查询年龄>18的对象，lt是小于，notEq是不等于，ge是 >= , le 是 <= 。
+        List<User> users10 = userDao.queryBuilder().where(UserDao.Properties.Age.gt(18)).list();
+        for (User user : users9) {
+            System.out.println("10--user : "+user.getName() +"::"+user.getAge() +"::"+user.getTel());
+        }
+
+        //11.子线程查询数据
+        queryThread();
     }
+
+    /**
+     * 子线程查询数据
+     */
+    public void queryThread(){
+        final Query<User> build = userDao.queryBuilder().build();
+
+        new Thread(){
+            @Override
+            public void run() {
+                //注意：build.forCurrentThread()
+                List<User> list = build.forCurrentThread().list();
+                for (User user : list) {
+                    System.out.println("list--user : "+user.getName() +"::"+user.getAge() +"::"+user.getTel());
+                }
+            }
+        }.start();
+    }
+
     //删除
     private void delete() {
         //1.根据key单个删除，删除id为2的（第二条）数据
